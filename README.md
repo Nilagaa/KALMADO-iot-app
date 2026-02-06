@@ -29,15 +29,15 @@ By providing real-time alerts, historical analytics, and a sensory comfort statu
 4. RUN APPLICATION:
 ```$ flutter run```
 
-# System Setup
+## System Setup
 
-##[ IOT DEVICE SETUP ]
+[ IOT DEVICE SETUP ]
 1. Connect sensors (Sound, DHT11, LDR, MQ-135) to the ESP32 microcontroller.
 2. Open the source code in Arduino IDE and install Firebase/WiFi libraries.
 3. Update the WiFi SSID, Password, and Firebase API credentials.
 4. Flash the firmware to the ESP32.
 
-##[ CLOUD SERVICES SETUP ]
+[ CLOUD SERVICES SETUP ]
 1. Create a project in the Firebase Console.
 2. Enable "Realtime Database" and "Cloud Messaging".
 3. Register your app and download 'google-services.json' or 'GoogleService-Info.plist'.
