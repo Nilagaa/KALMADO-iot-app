@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "185767570250",
+    "firebase_url": "https://kalmado-appdev-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "kalmado-appdev",
+    "storage_bucket": "kalmado-appdev.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:185767570250:android:219611f772b8de2b712fb3",
+        "android_client_info": {
+          "package_name": "com.example.kalmado_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDDNuQiQC_F1_LLOnxugupSrX234CKhSl4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

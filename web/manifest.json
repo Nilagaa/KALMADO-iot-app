@@ -1,6 +1,6 @@
 {
-    "name": "myfirstapplication",
-    "short_name": "myfirstapplication",
+    "name": "kalmado_app",
+    "short_name": "kalmado_app",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
