@@ -38,9 +38,12 @@ class AlertTile extends StatelessWidget {
 
   String _timeAgo() {
     final diff = DateTime.now().difference(time);
-    if (diff.inSeconds < 60) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    return '${diff.inHours}h ago';
+    if (diff.inSeconds < 10) return 'Just now';
+    if (diff.inSeconds < 60) return '${diff.inSeconds} secs ago';
+    if (diff.inMinutes == 1) return '1 minute ago';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} minutes ago';
+    if (diff.inHours == 1) return '1 hour ago';
+    return '${diff.inHours} hours ago';
   }
 
   @override

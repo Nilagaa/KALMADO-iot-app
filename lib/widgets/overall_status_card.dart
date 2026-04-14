@@ -13,11 +13,22 @@ class OverallStatusCard extends StatelessWidget {
   });
 
   String _timeLabel() {
-    if (timestamp == 0) return 'Waiting for data...';
+    if (timestamp == 0) {
+      return 'Live now';
+    }
     final dt = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
-    final diff = DateTime.now().difference(dt);
-    if (diff.inSeconds < 60) return 'Updated just now';
-    if (diff.inMinutes < 60) return 'Updated ${diff.inMinutes}m ago';
+    final now = DateTime.now();
+    // Sanity check: if timestamp is in the future or unrealistically old, show safe fallback
+    if (dt.isAfter(now) || now.difference(dt).inDays > 1) {
+      return 'Updated recently';
+    }
+    final diff = now.difference(dt);
+    if (diff.inSeconds < 60) {
+      return 'Updated just now';
+    }
+    if (diff.inMinutes < 60) {
+      return 'Updated ${diff.inMinutes}m ago';
+    }
     return 'Updated ${diff.inHours}h ago';
   }
 

@@ -38,15 +38,15 @@ class SensorDetailScreen extends StatelessWidget {
   SensorDetailConfig _buildConfig(ClassroomModel data) {
     switch (sensorType) {
       case SensorType.temperature:
-        return SensorLogic.temperatureConfig(data.temperature);
+        return SensorLogic.temperatureConfig(data);
       case SensorType.humidity:
-        return SensorLogic.humidityConfig(data.humidity);
+        return SensorLogic.humidityConfig(data);
       case SensorType.light:
-        return SensorLogic.lightConfig(data.light);
+        return SensorLogic.lightConfig(data);
       case SensorType.gas:
-        return SensorLogic.gasConfig(data.gas);
+        return SensorLogic.gasConfig(data);
       case SensorType.noise:
-        return SensorLogic.noiseConfig(data.noise);
+        return SensorLogic.noiseConfig(data);
     }
   }
 }
@@ -58,22 +58,26 @@ class _DetailPage extends StatelessWidget {
   const _DetailPage({required this.config});
 
   SensorStatus get _level {
-    switch (config.statusLabel) {
-      case 'Comfortable':
-      case 'Clean Air':
-        return SensorStatus.comfortable;
-      case 'Too Cold':
-      case 'Too Hot':
-      case 'Too Dry':
-      case 'Too Humid':
-      case 'Too Dark':
-      case 'Too Bright':
-      case 'Poor Air':
-      case 'Critical':
-        return SensorStatus.critical;
-      default:
-        return SensorStatus.moderate;
+    // Map known comfortable labels
+    const comfortableLabels = {'Comfortable', 'Clean', 'Quiet'};
+    // Map known critical labels
+    const criticalLabels = {
+      'Too Cold',
+      'Too Hot',
+      'Too Dry',
+      'Too Humid',
+      'Too Dark',
+      'Too Bright',
+      'Poor Air Quality',
+      'Too Loud',
+    };
+    if (comfortableLabels.contains(config.statusLabel)) {
+      return SensorStatus.comfortable;
     }
+    if (criticalLabels.contains(config.statusLabel)) {
+      return SensorStatus.critical;
+    }
+    return SensorStatus.moderate;
   }
 
   @override
@@ -299,6 +303,14 @@ class _ComfortRangeCard extends StatelessWidget {
     final idealEnd = (config.rangeIdealEnd - config.rangeMin) / total;
     final current = ((config.value - config.rangeMin) / total).clamp(0.0, 1.0);
 
+    // Moderate zone (normalized) — -1 means not set
+    final modStart = config.rangeModerateStart >= 0
+        ? (config.rangeModerateStart - config.rangeMin) / total
+        : -1.0;
+    final modEnd = config.rangeModerateEnd >= 0
+        ? (config.rangeModerateEnd - config.rangeMin) / total
+        : -1.0;
+
     return _DetailCard(
       title: 'Comfort Range',
       child: Column(
@@ -307,17 +319,22 @@ class _ComfortRangeCard extends StatelessWidget {
           _RangeBar(
             idealStart: idealStart,
             idealEnd: idealEnd,
+            moderateStart: modStart,
+            moderateEnd: modEnd,
             currentPos: current,
             statusColor: statusColor,
+            leftIsComfortable: config.rangeLowLabel == 'Optimal',
           ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _RangeLabel(
-                text: 'Too Low',
+                text: config.rangeLowLabel,
                 value: '${config.rangeMin.toStringAsFixed(0)} ${config.unit}',
-                color: AppColors.critical,
+                color: config.rangeLowLabel == 'Optimal'
+                    ? AppColors.comfortable
+                    : AppColors.critical,
               ),
               _RangeLabel(
                 text: 'Optimal',
@@ -340,75 +357,205 @@ class _ComfortRangeCard extends StatelessWidget {
   }
 }
 
-class _RangeBar extends StatelessWidget {
+class _RangeBar extends StatefulWidget {
   final double idealStart, idealEnd, currentPos;
+  final double moderateStart, moderateEnd; // normalized -1 = not set
   final Color statusColor;
+  final bool leftIsComfortable;
+
   const _RangeBar({
     required this.idealStart,
     required this.idealEnd,
     required this.currentPos,
     required this.statusColor,
+    this.moderateStart = -1,
+    this.moderateEnd = -1,
+    this.leftIsComfortable = false,
   });
+
+  @override
+  State<_RangeBar> createState() => _RangeBarState();
+}
+
+class _RangeBarState extends State<_RangeBar>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _posAnim;
+  double _prevPos = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _posAnim = Tween<double>(
+      begin: 0,
+      end: widget.currentPos,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _prevPos = widget.currentPos;
+    _ctrl.forward();
+  }
+
+  @override
+  void didUpdateWidget(_RangeBar old) {
+    super.didUpdateWidget(old);
+    if ((widget.currentPos - _prevPos).abs() > 0.001) {
+      _posAnim = Tween<double>(
+        begin: _prevPos,
+        end: widget.currentPos,
+      ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+      _prevPos = widget.currentPos;
+      _ctrl
+        ..reset()
+        ..forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final w = constraints.maxWidth;
-        final x = (currentPos * w).clamp(6.0, w - 6.0);
-        return SizedBox(
-          height: 36,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                top: 14,
-                left: 0,
-                right: 0,
-                child: Container(
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0F4F8),
-                    borderRadius: BorderRadius.circular(4),
+        return AnimatedBuilder(
+          animation: _posAnim,
+          builder: (context, child) {
+            final x = (_posAnim.value * w).clamp(6.0, w - 6.0);
+            final segments = _buildSegments(w);
+            // Derive dot color from position — not from Firebase status
+            final dotColor = _colorAtPosition(_posAnim.value);
+            return SizedBox(
+              height: 36,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    top: 14,
+                    left: 0,
+                    right: 0,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Row(children: segments),
+                    ),
                   ),
-                ),
-              ),
-              Positioned(
-                top: 14,
-                left: idealStart * w,
-                width: (idealEnd - idealStart) * w,
-                child: Container(
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: AppColors.comfortable.withValues(alpha: 0.35),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 4,
-                left: x - 10,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: statusColor.withValues(alpha: 0.4),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
+                  Positioned(
+                    top: 4,
+                    left: x - 10,
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: dotColor,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: dotColor.withValues(alpha: 0.45),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
+  }
+
+  /// Returns the zone color at a given normalized position (0–1).
+  /// This drives the dot color independently of Firebase status.
+  Color _colorAtPosition(double pos) {
+    final hasModerate = widget.moderateStart >= 0 && widget.moderateEnd >= 0;
+
+    if (widget.leftIsComfortable) {
+      // Gas / Noise: green → orange → red
+      if (pos <= widget.idealEnd) return AppColors.comfortable;
+      if (hasModerate && pos <= widget.moderateEnd) return AppColors.moderate;
+      return AppColors.critical;
+    } else {
+      // Temp / Humidity / Light: red → [orange] → green → [orange] → red
+      if (pos >= widget.idealStart && pos <= widget.idealEnd) {
+        return AppColors.comfortable;
+      }
+      if (hasModerate) {
+        // Left moderate zone
+        if (pos < widget.idealStart &&
+            pos >= widget.moderateStart &&
+            widget.moderateStart < widget.idealStart) {
+          return AppColors.moderate;
+        }
+        // Right moderate zone
+        if (pos > widget.idealEnd && pos <= widget.moderateEnd) {
+          return AppColors.moderate;
+        }
+      }
+      return AppColors.critical;
+    }
+  }
+
+  List<Widget> _buildSegments(double w) {
+    final zones = <({double end, Color color})>[];
+    final hasModerate = widget.moderateStart >= 0 && widget.moderateEnd >= 0;
+
+    if (widget.leftIsComfortable) {
+      // Gas/Noise: green → orange → red
+      zones.add((end: widget.idealEnd, color: AppColors.comfortable));
+      if (hasModerate) {
+        zones.add((end: widget.moderateEnd, color: AppColors.moderate));
+      }
+      zones.add((end: 1.0, color: AppColors.critical));
+    } else {
+      // Temp/Humidity/Light: red → [orange] → green → [orange] → red
+      if (widget.idealStart > 0) {
+        if (hasModerate && widget.moderateStart < widget.idealStart) {
+          if (widget.moderateStart > 0) {
+            zones.add((end: widget.moderateStart, color: AppColors.critical));
+          }
+          zones.add((end: widget.idealStart, color: AppColors.moderate));
+        } else {
+          zones.add((end: widget.idealStart, color: AppColors.critical));
+        }
+      }
+      zones.add((end: widget.idealEnd, color: AppColors.comfortable));
+      if (widget.idealEnd < 1.0) {
+        if (hasModerate && widget.moderateEnd > widget.idealEnd) {
+          zones.add((end: widget.moderateEnd, color: AppColors.moderate));
+          if (widget.moderateEnd < 1.0) {
+            zones.add((end: 1.0, color: AppColors.critical));
+          }
+        } else {
+          zones.add((end: 1.0, color: AppColors.critical));
+        }
+      }
+    }
+
+    double prev = 0;
+    final widgets = <Widget>[];
+    for (final z in zones) {
+      final segW = (z.end - prev) * w;
+      if (segW > 0) {
+        widgets.add(
+          Container(
+            width: segW,
+            height: 8,
+            color: z.color.withValues(alpha: 0.6),
+          ),
+        );
+      }
+      prev = z.end;
+    }
+    return widgets;
   }
 }
 
@@ -519,7 +666,7 @@ class _SuggestionsCard extends StatelessWidget {
 
 // ── Score card ────────────────────────────────────────────────────────────────
 
-class _ScoreCard extends StatelessWidget {
+class _ScoreCard extends StatefulWidget {
   final int score;
   final Color statusColor, statusBg;
   const _ScoreCard({
@@ -527,6 +674,53 @@ class _ScoreCard extends StatelessWidget {
     required this.statusColor,
     required this.statusBg,
   });
+
+  @override
+  State<_ScoreCard> createState() => _ScoreCardState();
+}
+
+class _ScoreCardState extends State<_ScoreCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+  double _prevValue = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _anim = Tween<double>(
+      begin: 0,
+      end: widget.score / 100,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _prevValue = widget.score / 100;
+    _ctrl.forward();
+  }
+
+  @override
+  void didUpdateWidget(_ScoreCard old) {
+    super.didUpdateWidget(old);
+    final newVal = widget.score / 100;
+    if ((newVal - _prevValue).abs() > 0.005) {
+      _anim = Tween<double>(
+        begin: _prevValue,
+        end: newVal,
+      ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+      _prevValue = newVal;
+      _ctrl
+        ..reset()
+        ..forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -541,26 +735,31 @@ class _ScoreCard extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                SizedBox(
-                  width: 110,
-                  height: 110,
-                  child: CircularProgressIndicator(
-                    value: score / 100,
-                    strokeWidth: 10,
-                    backgroundColor: statusBg,
-                    valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-                    strokeCap: StrokeCap.round,
+                AnimatedBuilder(
+                  animation: _anim,
+                  builder: (context, child) => SizedBox(
+                    width: 110,
+                    height: 110,
+                    child: CircularProgressIndicator(
+                      value: _anim.value,
+                      strokeWidth: 10,
+                      backgroundColor: widget.statusBg,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        widget.statusColor,
+                      ),
+                      strokeCap: StrokeCap.round,
+                    ),
                   ),
                 ),
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '$score',
+                      '${widget.score}',
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.w800,
-                        color: statusColor,
+                        color: widget.statusColor,
                         height: 1.0,
                       ),
                     ),

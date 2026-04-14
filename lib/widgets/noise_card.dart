@@ -3,24 +3,73 @@ import '../utils/app_colors.dart';
 import '../utils/app_text_styles.dart';
 import '../utils/sensor_logic.dart';
 
-/// Full-width highlighted noise level card.
-class NoiseCard extends StatelessWidget {
+/// Full-width highlighted noise level card with animated progress bar.
+class NoiseCard extends StatefulWidget {
   final double noiseDb;
+  final StatusResult? status;
   final VoidCallback? onTap;
 
-  const NoiseCard({super.key, required this.noiseDb, this.onTap});
+  const NoiseCard({super.key, required this.noiseDb, this.status, this.onTap});
+
+  @override
+  State<NoiseCard> createState() => _NoiseCardState();
+}
+
+class _NoiseCardState extends State<NoiseCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _progressAnim;
+  double _prevProgress = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    final p = SensorLogic.noiseProgress(widget.noiseDb);
+    _progressAnim = Tween<double>(
+      begin: 0,
+      end: p,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _prevProgress = p;
+    _ctrl.forward();
+  }
+
+  @override
+  void didUpdateWidget(NoiseCard old) {
+    super.didUpdateWidget(old);
+    final newP = SensorLogic.noiseProgress(widget.noiseDb);
+    if ((newP - _prevProgress).abs() > 0.001) {
+      _progressAnim = Tween<double>(
+        begin: _prevProgress,
+        end: newP,
+      ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+      _prevProgress = newP;
+      _ctrl
+        ..reset()
+        ..forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final status = SensorLogic.noiseStatus(noiseDb);
-    final statusColor = SensorLogic.statusColor(status.level);
-    final statusBg = SensorLogic.statusBgColor(status.level);
-    final progress = SensorLogic.noiseProgress(noiseDb);
+    final resolvedStatus =
+        widget.status ?? SensorLogic.noiseStatus(widget.noiseDb);
+    final statusColor = SensorLogic.statusColor(resolvedStatus.level);
+    final statusBg = SensorLogic.statusBgColor(resolvedStatus.level);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: widget.onTap,
         borderRadius: BorderRadius.circular(24),
         child: Container(
           width: double.infinity,
@@ -74,7 +123,6 @@ class NoiseCard extends StatelessWidget {
                     ],
                   ),
                   const Spacer(),
-                  // Status chip
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -85,7 +133,7 @@ class NoiseCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      status.label,
+                      resolvedStatus.label,
                       style: AppTextStyles.statusLabel.copyWith(
                         color: statusColor,
                       ),
@@ -101,7 +149,7 @@ class NoiseCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    noiseDb.toStringAsFixed(0),
+                    widget.noiseDb.toStringAsFixed(0),
                     style: const TextStyle(
                       fontSize: 48,
                       fontWeight: FontWeight.w800,
@@ -119,12 +167,17 @@ class NoiseCard extends StatelessWidget {
 
               const SizedBox(height: 16),
 
-              // Mini bar graph placeholder (5 bars)
-              _MiniBarGraph(progress: progress, color: statusColor),
+              // Animated mini bar graph
+              AnimatedBuilder(
+                animation: _progressAnim,
+                builder: (context, child) => _MiniBarGraph(
+                  progress: _progressAnim.value,
+                  color: statusColor,
+                ),
+              ),
 
               const SizedBox(height: 14),
 
-              // Scale labels
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -147,14 +200,17 @@ class NoiseCard extends StatelessWidget {
 
               const SizedBox(height: 8),
 
-              // Horizontal progress scale
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 8,
-                  backgroundColor: statusBg,
-                  valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+              // Animated progress bar
+              AnimatedBuilder(
+                animation: _progressAnim,
+                builder: (context, child) => ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: _progressAnim.value,
+                    minHeight: 8,
+                    backgroundColor: statusBg,
+                    valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                  ),
                 ),
               ),
             ],
@@ -165,17 +221,23 @@ class NoiseCard extends StatelessWidget {
   }
 }
 
-/// Simple animated bar graph placeholder
 class _MiniBarGraph extends StatelessWidget {
   final double progress;
   final Color color;
-
   const _MiniBarGraph({required this.progress, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    // Generate 8 bars with varying heights to simulate a waveform
-    final heights = [0.4, 0.6, 0.5, 0.8, progress, 0.7, 0.5, 0.3];
+    final heights = [
+      0.4,
+      0.6,
+      0.5,
+      0.8,
+      progress.clamp(0.05, 1.0),
+      0.7,
+      0.5,
+      0.3,
+    ];
     return SizedBox(
       height: 40,
       child: Row(

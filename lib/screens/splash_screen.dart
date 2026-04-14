@@ -33,7 +33,7 @@ class _SplashScreenState extends State<SplashScreen>
     _animController.forward();
 
     // Navigate to onboarding after 2.5 seconds
-    Future.delayed(const Duration(milliseconds: 2500), () {
+    Future.delayed(const Duration(milliseconds: 4500), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
@@ -77,41 +77,11 @@ class _SplashScreenState extends State<SplashScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Logo card
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF4A90D9).withOpacity(0.15),
-                          blurRadius: 30,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.sensors,
-                        size: 60,
-                        color: Color(0xFF4A90D9),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 28),
-
-                  // App name
-                  const Text(
-                    'KALMADO',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF1A2B4A),
-                      letterSpacing: 3.0,
-                    ),
+                  // Logo — wider, no card background, just the image
+                  Image.asset(
+                    'assets/images/KALMADO_LOGO.png',
+                    width: 260,
+                    fit: BoxFit.contain,
                   ),
 
                   const SizedBox(height: 8),

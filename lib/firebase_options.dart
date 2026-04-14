@@ -55,7 +55,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '185767570250',
     projectId: 'kalmado-appdev',
     authDomain: 'kalmado-appdev.firebaseapp.com',
-    databaseURL: 'https://kalmado-appdev-default-rtdb.asia-southeast1.firebasedatabase.app',
+    databaseURL:
+        'https://kalmado-appdev-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'kalmado-appdev.firebasestorage.app',
   );
 
@@ -64,7 +65,8 @@ class DefaultFirebaseOptions {
     appId: '1:185767570250:android:219611f772b8de2b712fb3',
     messagingSenderId: '185767570250',
     projectId: 'kalmado-appdev',
-    databaseURL: 'https://kalmado-appdev-default-rtdb.asia-southeast1.firebasedatabase.app',
+    databaseURL:
+        'https://kalmado-appdev-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'kalmado-appdev.firebasestorage.app',
   );
 }

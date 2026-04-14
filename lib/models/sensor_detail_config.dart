@@ -17,9 +17,16 @@ class SensorDetailConfig {
 
   // Range bar values
   final double rangeMin;
-  final double rangeIdealStart;
-  final double rangeIdealEnd;
+  final double rangeIdealStart; // comfortable zone start
+  final double rangeIdealEnd; // comfortable zone end
   final double rangeMax;
+
+  // Moderate zone boundaries (optional — defaults to no moderate zone)
+  final double rangeModerateStart; // where moderate begins (left side)
+  final double rangeModerateEnd; // where moderate ends (right side)
+
+  /// Label shown at the low end of the range bar.
+  final String rangeLowLabel;
 
   const SensorDetailConfig({
     required this.title,
@@ -37,5 +44,8 @@ class SensorDetailConfig {
     required this.rangeIdealStart,
     required this.rangeIdealEnd,
     required this.rangeMax,
+    this.rangeModerateStart = -1, // -1 = not set
+    this.rangeModerateEnd = -1,
+    this.rangeLowLabel = 'Too Low',
   });
 }

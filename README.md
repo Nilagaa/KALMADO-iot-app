@@ -1,7 +1,16 @@
-# Kalmado App
+# kalmado_app
 
-Kalmado is an **IoT-based monitoring system** for SNED classrooms. It tracks **noise, temperature, lighting, and odor** in real time. The system provides a clear dashboard, alerts, and historical analytics to help teachers manage sensory conditions and support student focus and regulation.
+A new Flutter project.
 
 ## Getting Started
 
-This project is built with **Flutter** and serves as a starting point for a cross-platform application.
+This project is a starting point for a Flutter application.
+
+A few resources to get you started if this is your first Flutter project:
+
+- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
+- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+
+For help getting started with Flutter development, view the
+[online documentation](https://docs.flutter.dev/), which offers tutorials,
+samples, guidance on mobile development, and a full API reference.

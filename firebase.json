@@ -1,1 +1,26 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"kalmado-appdev","appId":"1:185767570250:android:219611f772b8de2b712fb3","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"kalmado-appdev","configurations":{"android":"1:185767570250:android:219611f772b8de2b712fb3","web":"1:185767570250:web:237cfa061edc9867712fb3"}}}}}}
+{
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs20"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "kalmado-appdev",
+          "appId": "1:185767570250:android:219611f772b8de2b712fb3",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "kalmado-appdev",
+          "configurations": {
+            "android": "1:185767570250:android:219611f772b8de2b712fb3",
+            "web": "1:185767570250:web:237cfa061edc9867712fb3"
+          }
+        }
+      }
+    }
+  }
+}

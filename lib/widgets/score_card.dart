@@ -3,20 +3,64 @@ import '../utils/app_colors.dart';
 import '../utils/app_text_styles.dart';
 import '../utils/sensor_logic.dart';
 
-class ScoreCard extends StatelessWidget {
+class ScoreCard extends StatefulWidget {
   final int score;
   const ScoreCard({super.key, required this.score});
 
   @override
-  Widget build(BuildContext context) {
-    final SensorStatus level;
-    if (score >= 70) {
-      level = SensorStatus.comfortable;
-    } else if (score >= 40) {
-      level = SensorStatus.moderate;
-    } else {
-      level = SensorStatus.critical;
+  State<ScoreCard> createState() => _ScoreCardState();
+}
+
+class _ScoreCardState extends State<ScoreCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+  double _prevValue = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _anim = Tween<double>(
+      begin: 0,
+      end: widget.score / 100,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _prevValue = widget.score / 100;
+    _ctrl.forward();
+  }
+
+  @override
+  void didUpdateWidget(ScoreCard old) {
+    super.didUpdateWidget(old);
+    final newVal = widget.score / 100;
+    if ((newVal - _prevValue).abs() > 0.005) {
+      _anim = Tween<double>(
+        begin: _prevValue,
+        end: newVal,
+      ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+      _prevValue = newVal;
+      _ctrl
+        ..reset()
+        ..forward();
     }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final SensorStatus level = widget.score >= 70
+        ? SensorStatus.comfortable
+        : widget.score >= 40
+        ? SensorStatus.moderate
+        : SensorStatus.critical;
 
     final color = SensorLogic.statusColor(level);
     final bg = SensorLogic.statusBgColor(level);
@@ -43,22 +87,25 @@ class ScoreCard extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                SizedBox(
-                  width: 90,
-                  height: 90,
-                  child: CircularProgressIndicator(
-                    value: score / 100,
-                    strokeWidth: 8,
-                    backgroundColor: bg,
-                    valueColor: AlwaysStoppedAnimation<Color>(color),
-                    strokeCap: StrokeCap.round,
+                AnimatedBuilder(
+                  animation: _anim,
+                  builder: (context, child) => SizedBox(
+                    width: 90,
+                    height: 90,
+                    child: CircularProgressIndicator(
+                      value: _anim.value,
+                      strokeWidth: 8,
+                      backgroundColor: bg,
+                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                      strokeCap: StrokeCap.round,
+                    ),
                   ),
                 ),
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '$score',
+                      '${widget.score}',
                       style: AppTextStyles.scoreNumber.copyWith(
                         fontSize: 28,
                         color: color,
